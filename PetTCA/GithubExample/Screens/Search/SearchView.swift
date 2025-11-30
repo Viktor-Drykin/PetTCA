@@ -56,7 +56,7 @@ struct SearchView: View {
                     )
                     .padding(16)
                 NavigationLink(
-                    state: SearchReducer.Destination.State.repositories(RepositoryListFeature.State())
+                    state: SearchReducer.Destination.State.repositories(RepositoryListFeature.State(userName: store.userName))
                 ) {
                     Text("Enter")
                         .font(.title)

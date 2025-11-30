@@ -11,27 +11,24 @@ import ComposableArchitecture
 struct RepositoryListView: View {
 
     var store: StoreOf<RepositoryListFeature>
-    //@ObservedObject var viewModel: RepositoryListViewModel
-    var userName: String = "Set username"
 
     var body: some View {
         ScrollView {
-//            switch store.state {
-//            case .loading:
-//                ProgressView()
-//            case .loaded(let repoList):
-//                contentView(with: repoList)
-//            case .failed(let message):
-//                errorView(with: message)
-//            }
+            switch store.state.requestState {
+            case .loading:
+                ProgressView()
+            case .loaded(let repoList):
+                contentView(with: repoList)
+            case .failed(let message):
+                errorView(with: message)
+            }
         }
         .scrollIndicators(.hidden)
         .padding()
         .onAppear {
-            store.send(.requestRepositoryList)
-            //viewModel.searchRepositories(for: userName)
+            store.send(.onAppear)
         }
-        .navigationTitle(userName)
+        .navigationTitle(store.userName)
     }
 
     private func contentView(with repoList: [Repository]) -> some View {
@@ -42,7 +39,7 @@ struct RepositoryListView: View {
                 Section {
                     ForEach(repoList) { repository in
 //                        NavigationLink(value: NavigationDestinations.pullRequests(userName: userName, repoName: repository.title)) {
-//                            RepositoryItemView(repoName: repository.title, repoDescription: repository.description)
+                            RepositoryItemView(repoName: repository.title, repoDescription: repository.description)
 //                        }
                     }
                 } header: {
@@ -65,7 +62,7 @@ struct RepositoryListView: View {
             .fontWeight(.medium)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.move(edge: .top))
-            //.animation(.bouncy, value: store.state)
+            .animation(.bouncy, value: store.state.requestState)
     }
 }
 

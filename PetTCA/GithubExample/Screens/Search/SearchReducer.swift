@@ -33,7 +33,6 @@ struct SearchReducer {
         Reduce { state, action in
             switch action {
             case .binding(\.userName):
-                print("username: \(state.userName)")
                 return .none
             case .didTapSearch:
                 print("didTapSearch")

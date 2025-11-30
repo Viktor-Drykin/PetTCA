@@ -10,16 +10,35 @@ import ComposableArchitecture
 @Reducer
 struct RepositoryListFeature {
     
+    enum Constant {
+        static let noRepos = "There are no repositories"
+        static let invalidStatusCodeError = "Error: invalidStatusCode"
+        static let failedToDecodeError = "Error: failedToDecode"
+        static let incorrectUserNameError = "Error: incorrectUserName"
+        static let unknownError = "Error: something went wrong"
+    }
+    
     @ObservableState
     struct State {
-        var repositories: [Repository] = []
+        
+        enum RequestState {
+            case loading
+            case loaded([Repository])
+            case failed(message: String)
+        }
+        
+        var userName: String = ""
+        var requestState: RequestState = .loading
+//        var repositories: [Repository] = []
+//        var isLoading: Bool = true
+//        var errorMessage: String? = nil
 //        case loading
 //        case loaded([Repository])
 //        case failed(message: String)
     }
     
     enum Action {
-        case requestRepositoryList
+        case onAppear
         case showError(message: String)
         case showRepository(list: [Repository])
     }
@@ -27,16 +46,60 @@ struct RepositoryListFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .requestRepositoryList:
-                print("requestRepositoryList:")
-                return .none
+            case .onAppear:
+                state.requestState = .loading
+                return requestRepository(userName: state.userName)
             case .showError(let errorMessage):
-                print("showError")
+                state.requestState = .failed(message: errorMessage)
                 return .none
             case .showRepository(let repositoryList):
-                print("showRepository")
+                state.requestState = .loaded(repositoryList)
                 return .none
             }
+        }
+    }
+    
+    private func requestRepository(userName: String) -> Effect<Action> {
+        let repoService = RepositoriesServiceImpl(apiService: APIClient())
+        return .run { send in
+            do {
+                let repositories = try await repoService.fetchRepos(with: userName)
+                let list: [Repository] = repositories.map { Repository(dto: $0) }
+                await send(.showRepository(list: list))
+            } catch {
+                let errorMessage = await errorMessage(for: error)
+                await send(.showError(message: errorMessage))
+            }
+        }
+    }
+    
+    private func errorMessage(for error: Error) -> String {
+        switch error {
+        case RepositoryServiceError.empty:
+            return Constant.noRepos
+        case RepositoryServiceError.invalidStatusCode:
+            return Constant.invalidStatusCodeError
+        case RepositoryServiceError.failedToDecode:
+            return Constant.failedToDecodeError
+        case RepositoryServiceError.incorrectUserName:
+            return Constant.incorrectUserNameError
+        default:
+            return Constant.unknownError
+        }
+    }
+}
+
+extension RepositoryListFeature.State.RequestState: Equatable {
+    static func == (lhs: RepositoryListFeature.State.RequestState, rhs: RepositoryListFeature.State.RequestState) -> Bool {
+        switch (lhs, rhs) {
+        case (.loading, .loading):
+            return true
+        case (.failed(let lhsMessage) ,.failed(let rhsMessage)):
+            return lhsMessage == rhsMessage
+        case (.loaded(let lhsRepos), .loaded(let rhsRepos)):
+            return lhsRepos.count == rhsRepos.count
+        default:
+            return false
         }
     }
 }
