@@ -15,7 +15,7 @@ struct RepositoryListView: View {
     var body: some View {
         ScrollView {
             switch store.state.requestState {
-            case .loading:
+            case .initial, .loading:
                 ProgressView()
             case .loaded(let repoList):
                 contentView(with: repoList)

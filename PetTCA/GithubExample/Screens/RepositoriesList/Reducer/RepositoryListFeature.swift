@@ -10,6 +10,8 @@ import ComposableArchitecture
 @Reducer
 struct RepositoryListFeature {
     
+    @Dependency(\.repositoryService) var repositoryService
+    
     enum Constant {
         static let noRepos = "There are no repositories"
         static let invalidStatusCodeError = "Error: invalidStatusCode"
@@ -19,22 +21,17 @@ struct RepositoryListFeature {
     }
     
     @ObservableState
-    struct State {
+    struct State: Equatable {
         
         enum RequestState {
+            case initial
             case loading
             case loaded([Repository])
             case failed(message: String)
         }
         
         var userName: String = ""
-        var requestState: RequestState = .loading
-//        var repositories: [Repository] = []
-//        var isLoading: Bool = true
-//        var errorMessage: String? = nil
-//        case loading
-//        case loaded([Repository])
-//        case failed(message: String)
+        var requestState: RequestState = .initial
     }
     
     enum Action {
@@ -60,10 +57,9 @@ struct RepositoryListFeature {
     }
     
     private func requestRepository(userName: String) -> Effect<Action> {
-        let repoService = RepositoriesServiceImpl(apiService: APIClient())
         return .run { send in
             do {
-                let repositories = try await repoService.fetchRepos(with: userName)
+                let repositories = try await repositoryService.fetchRepos(with: userName)
                 let list: [Repository] = repositories.map { Repository(dto: $0) }
                 await send(.showRepository(list: list))
             } catch {
@@ -97,6 +93,21 @@ extension RepositoryListFeature.State.RequestState: Equatable {
         case (.failed(let lhsMessage) ,.failed(let rhsMessage)):
             return lhsMessage == rhsMessage
         case (.loaded(let lhsRepos), .loaded(let rhsRepos)):
+            return lhsRepos.count == rhsRepos.count
+        default:
+            return false
+        }
+    }
+}
+
+extension RepositoryListFeature.Action: Equatable {
+    static func == (lhs: RepositoryListFeature.Action, rhs: RepositoryListFeature.Action) -> Bool {
+        switch (lhs, rhs) {
+        case (.onAppear, .onAppear):
+            return true
+        case (.showError, .showError):
+            return true
+        case (.showRepository(let lhsRepos), .showRepository(let rhsRepos)):
             return lhsRepos.count == rhsRepos.count
         default:
             return false
